@@ -545,10 +545,53 @@ function renderMenu(app){
       <div class="menu-card" id="goInterview"><div><p class="eyebrow">${t('interview')}</p><p>${t('interviewSub')}</p></div><span class="arrow">→</span></div>
       <div class="menu-card" id="goStories"><div><p class="eyebrow">${t('stories')}</p><p>${t('storiesSub')}</p></div><span class="arrow">→</span></div>
     </div>
+    <div class="btn-row">
+      <button class="btn" id="exportBtn">${lang==='en'?'⬇ Export my data':'⬇ Daten exportieren'}</button>
+      <button class="btn" id="importBtn">${lang==='en'?'⬆ Import data':'⬆ Daten importieren'}</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+    <p style="color:var(--ink-dim);font-size:13px;margin-top:10px;">${lang==='en'?'Use this to move your saved content to another device or browser.':'Damit kannst du deine gespeicherten Inhalte auf ein anderes Gerät oder einen anderen Browser übertragen.'}</p>
   </div>`;
   document.getElementById('back').onclick = ()=>goTo('lang-select');
   document.getElementById('goInterview').onclick = ()=>goTo('interview');
   document.getElementById('goStories').onclick = ()=>goTo('stories-index');
+  document.getElementById('exportBtn').onclick = exportData;
+  document.getElementById('importBtn').onclick = ()=>document.getElementById('importFile').click();
+  document.getElementById('importFile').onchange = importData;
+}
+
+function exportData(){
+  const payload = { interviewQ, topics, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'career-journal-backup.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(data.interviewQ) interviewQ = data.interviewQ;
+      if(data.topics) topics = data.topics;
+      await saveInterview();
+      await saveTopics();
+      alert(lang==='en' ? 'Import successful — your content has been loaded.' : 'Import erfolgreich — deine Inhalte wurden geladen.');
+      render();
+    }catch(err){
+      alert(lang==="en" ? "Could not read that file. Make sure it's a backup exported from this app." : "Diese Datei konnte nicht gelesen werden. Stelle sicher, dass es ein Backup aus dieser App ist.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
 }
 
 function renderStoriesIndex(app){
